@@ -2,7 +2,7 @@
 
 *Prismic.io support for NodeJS*
 
-[![npm version](https://badge.fury.io/js/express-prismic.svg)](http://badge.fury.io/js/express-prismic)
+[![npm version](https://badge.fury.io/js/prismic-nodejs.svg)](http://badge.fury.io/js/prismic-nodejs)
 
 This is a set of helpers to use Prismic.io in a [NodeJS](http://nodejs.org/) application. Currently it only contains a helper to create a preview route. If you're starting from scratch, our [NodeJS SDK](https://github.com/prismicio/nodejs-sdk) is a good base.
 
