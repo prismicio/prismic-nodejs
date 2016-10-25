@@ -63,7 +63,7 @@ function fetchData(req, res, fetchers) {
     var pData = fetchers.map(function(f, index) {
       switch(f.condition.kind) {
         case Condition.UID:
-          return req.api.getByUID(f.mask, req.params[f.condition.key])
+          return req.prismic.api.getByUID(f.mask, req.params[f.condition.key])
           .then(function(doc) {
             var obj = {}
             obj[f.name] = doc
@@ -74,7 +74,7 @@ function fetchData(req, res, fetchers) {
           })
 
         case Condition.Singleton:
-          return req.api.getSingle(f.mask)
+          return req.prismic.api.getSingle(f.mask)
           .then(function(doc) {
             var obj = {}
             obj[f.name] = doc
@@ -93,25 +93,43 @@ function fetchData(req, res, fetchers) {
   })
 }
 
-Prismic.init = function(app, config, handleError) {
+function buildReverseRouter(dynRoutes) {
+  return function(doc) {
+    var docRoute = dynRoutes.find(function(dr) {
+      return dr.mask === doc.type
+    })
+    return buildURL(docRoute.fragments)
+  }
+}
+
+Prismic.init = function(app, config, manualRouting, handleError) {
   if(!config || !config.apiEndpoint) throw 'Missing Prismic Api Endpoint';
+
 
   app.route('*').get((req, res, next) => {
     Prismic.api(config.apiEndpoint, config.accessToken)
     .then((api) => {
-      req.api = api
+      req.prismic = {}
+      req.prismic.api = api
+      res.locals.ctx = {
+        linkResolver: buildReverseRouter(dynRoutes),
+        endpoint: config.apiEndpoint
+      }
       next()
     })
   })
 
-  dynRoutes.map((route, index) => {
+  dynRoutes.map(function(route, index) {
     var url = buildURL(route.fragments)
-    console.log(url)
-    app.route(url).get((req, res) => {
+    app.route(url).get(function(req, res, next) {
       fetchData(req, res, route.fetchers)
       .then(function(data) {
-        console.log(data)
-        res.render(route.view, data)
+        if(manualRouting) {
+          req.prismic[route.id] = {view: route.view, data}
+          next()
+        } else {
+          res.render(route.view, data)
+        }
       })
       .catch(function(err) {
         handleError(err, req, res)
