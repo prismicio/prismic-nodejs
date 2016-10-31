@@ -93,12 +93,13 @@ function fetchData(req, res, fetchers) {
   })
 }
 
-function buildReverseRouter(dynRoutes) {
+function buildReverseRouter(dynRoutes, linkResolver) {
   return function(doc) {
     var docRoute = dynRoutes.find(function(dr) {
       return dr.mask === doc.type
     })
-    return buildURL(docRoute.fragments)
+    if(docRoute) return buildURL(docRoute.fragments)
+    else return linkResolver(doc)
   }
 }
 
@@ -112,7 +113,7 @@ Prismic.init = function(app, config, manualRouting, handleError) {
       req.prismic = {}
       req.prismic.api = api
       res.locals.ctx = {
-        linkResolver: buildReverseRouter(dynRoutes),
+        linkResolver: buildReverseRouter(dynRoutesm config.linkResolver),
         endpoint: config.apiEndpoint
       }
       next()
