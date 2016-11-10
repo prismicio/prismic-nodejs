@@ -30,6 +30,7 @@ var Kind = {
 }
 
 var Condition = {
+  ID: 'withId',
   UID: 'withUid',
   Singleton: 'singleton'
 }
@@ -62,6 +63,17 @@ function fetchData(req, res, fetchers) {
   return new Promise((resolve, reject) => {
     var pData = fetchers.map(function(f, index) {
       switch(f.condition.kind) {
+      case Condition.ID:
+        return req.prismic.api.getByID(f.mask, req.params[f.condition.key])
+          .then(function(doc) {
+            var obj = {}
+            obj[f.name] = doc
+            return obj
+          })
+          .catch(function(err) {
+            reject(err)
+          })
+
         case Condition.UID:
           return req.prismic.api.getByUID(f.mask, req.params[f.condition.key])
           .then(function(doc) {
@@ -113,7 +125,7 @@ Prismic.init = function(app, config, manualRouting, handleError) {
       req.prismic = {}
       req.prismic.api = api
       res.locals.ctx = {
-        linkResolver: buildReverseRouter(dynRoutesm config.linkResolver),
+        linkResolver: buildReverseRouter(dynRoutes, config.linkResolver),
         endpoint: config.apiEndpoint
       }
       next()
