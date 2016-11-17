@@ -2,49 +2,66 @@ var Prismic = require('prismic.io');
 var QuickRoutes = Prismic.QuickRoutes;
 var Cookies = require('cookies');
 
-Prismic.init = function(app, config, handleError) {
+Prismic.init = (app, config, handleError) => {
   if(!config || !config.apiEndpoint) throw 'Missing Prismic Api Endpoint';
 
+  // catch all routes to attach api and context
+  var setupMiddleware = (linkResolver) => {
+    app.route('*').get((req, res, next) => {
+      Prismic.api(config.apiEndpoint, config.accessToken)
+        .then((api) => {
+          req.prismic = { api: api };
+          res.locals.ctx = {
+            endpoint: config.apiEndpoint,
+            linkResolver: linkResolver
+          };
+          next();
+        })
+        .catch((err) => {
+          if (handleError) {
+            handleError(err, req, res);
+          } else {
+            next(err);
+          }
+        });
+    });
+  };
+
+  // TODO check quick routes feature flag
   return Prismic.api(config.apiEndpoint, config.accessToken)
     .then(api => api.quickRoutes())
     .then(quickRoutes => {
 
-      app.route('*').get((req, res, next) => {
-        Prismic.api(config.apiEndpoint, config.accessToken)
-          .then((api) => {
-            req.prismic = { api: api };
-            res.locals.ctx = {
-              linkResolver: QuickRoutes.buildReverseRouter(quickRoutes, config.linkResolver),
-              endpoint: config.apiEndpoint
-            };
-            next();
-          })
-          .catch((err) => next(err));
-      });
+      var linkResolver = QuickRoutes.makeLinkResolver(quickRoutes, config.linkResolver);
+      setupMiddleware(linkResolver);
 
-      quickRoutes.filter(r => r.enabled).map(function(route, index) {
-        var url = QuickRoutes.buildURL(route.fragments);
-        app.route(url).get(function(req, res, next) {
+      // use quick routes to generate router
+      quickRoutes.filter(r => r.enabled).map((route, index) => {
+        app.route(QuickRoutes.toUrl(route)).get((req, res, next) => {
           QuickRoutes.fetchData(req, res, route.fetchers)
-            .then(function(data) {
+            .then((data) => {
               res.render(route.view, data);
             })
-            .catch(function(err) {
-              handleError(err, req, res);
+            .catch((err) => {
+              if (handleError) {
+                handleError(err, req, res);
+              } else {
+                next(err);
+              }
             });
         });
       });
     });
 };
 
-Prismic.preview = function(api, linkResolver, req, res) {
+Prismic.preview = (api, linkResolver, req, res) => {
   var token = req.query['token'];
   if (token) {
-    api.previewSession(token, linkResolver, '/').then(function(url) {
+    api.previewSession(token, linkResolver, '/').then((url) => {
       var cookies = new Cookies(req, res);
       cookies.set(Prismic.previewCookie, token, { maxAge: 30 * 60 * 1000, path: '/', httpOnly: false });
       res.redirect(301, url);
-    }).catch(function(err) {
+    }).catch((err) => {
       res.status(500).send("Error 500 in preview: " + err.message);
     });
   } else {
