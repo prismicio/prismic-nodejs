@@ -4,18 +4,25 @@ var Cookies = require('cookies');
 
 Prismic.init = (app, config, handleError) => {
   if (!config || !config.apiEndpoint) throw 'Missing Prismic Api Endpoint';
-
   // catch all routes to attach api and context
-  function setupMiddleware (linkResolver)  {
+  function setupMiddleware (app)  {
     app.route('*').get((req, res, next) => {
       Prismic.api(config.apiEndpoint, config.accessToken)
         .then((api) => {
-          req.prismic = { api: api };
-          res.locals.ctx = {
-            endpoint: config.apiEndpoint,
-            linkResolver: linkResolver
-          };
-          next();
+          const pQuickRoutes = api.quickRoutesEnabled() ? api.quickRoutes() : Promise.resolve([])
+          return pQuickRoutes.then(quickroutes => {
+            //refresh app object with new quick routes
+            hotReloadRoutes(app, quickroutes);
+
+            //configure prismic context
+            req.prismic = { api: api };
+            res.locals.ctx = {
+              endpoint: config.apiEndpoint,
+              linkResolver: QuickRoutes.makeLinkResolver(quickroutes, config.linkResolver)
+            };
+            next();
+
+          });
         })
         .catch((err) => {
           if (handleError) {
@@ -26,6 +33,10 @@ Prismic.init = (app, config, handleError) => {
         });
     });
   };
+
+  function quickRoutesURL() {
+    return quickRoutes.filter(r => r.enabled).map((route) => QuickRoutes.toUrl(route));
+  }
 
   // use quick routes to generate router
   function setupQuickRoutes(quickRoutes) {
@@ -46,15 +57,28 @@ Prismic.init = (app, config, handleError) => {
     });
   }
 
-  return Prismic.api(config.apiEndpoint, config.accessToken).then(api => {
-    if (api.quickRoutesEnabled()) {
-      api.quickRoutes().then(quickRoutes => {
-        var linkResolver = QuickRoutes.makeLinkResolver(quickRoutes, config.linkResolver);
-        setupMiddleware(linkResolver);
-        setupQuickRoutes(quickRoutes);
-      });
-    } else {
-      setupMiddleware(config.linkResolver);
+  function hotReloadRoutes (app, quickroutes) {
+    const quickroutesURLs = quickroutes.filter(r => r.enabled).map((route) => QuickRoutes.toUrl(route));
+    //reset quickroutes
+    app._router.stack.filter(expressRoute => {
+      if(!expressRoute) return;
+      if(!expressRoute.route) return;
+
+      const quickRouteIndex = quickroutesURLs.indexOf(expressRoute.route.path)
+      if(-1 != quickRouteIndex) {
+        app._router.stack.splice(quickRouteIndex, 1);
+      }
+    });
+    //regenerate routes
+    setupQuickRoutes(quickroutes);
+  }
+
+  return Prismic.api(config.apiEndpoint, config.accessToken)
+  .then(api => setupMiddleware(app))
+  .catch((e) => {
+    switch(e.status) {
+      case 401: return console.log('you don\'t have access to this repository.');
+      case 404: return console.log('Cannot retrieve your prismic API, check your configuration.');
     }
   });
 };
