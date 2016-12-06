@@ -10,7 +10,7 @@ Prismic.init = (app, config, handleError) => {
     app.route('*').get(function prismicMiddleware(req, res, next) {
       Prismic.api(config.apiEndpoint, config.accessToken)
         .then((api) => {
-          const pQuickRoutes = api.quickRoutesEnabled() ? api.quickRoutes() : Promise.resolve([])
+          const pQuickRoutes = api.quickRoutesEnabled()  ? api.quickRoutes() : Promise.resolve([])
           return pQuickRoutes.then(quickroutes => {
             //refresh app object with new quick routes
             hotReloadRoutes(app, quickroutes);
