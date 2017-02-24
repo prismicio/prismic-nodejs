@@ -2,6 +2,30 @@ var Prismic = require('prismic.io');
 var QuickRoutes = Prismic.QuickRoutes;
 var Cookies = require('cookies');
 
+Prismic.getAPI = function (configuration, req, res) {
+  return Prismic
+    .api(configuration.apiEndpoint, {accessToken: configuration.accessToken, req})
+    .then(api => {
+      req.prismic = {api};
+      const expId = api.experiments.current() && api.experiments.current().googleId();
+      const exportVars = {
+        endpoint: configuration.apiEndpoint,
+        trackingId: configuration.trackingId,
+        expId: expId,
+      };
+      const scripts = [];
+      scripts.push(`<script>window.prismic = ${JSON.stringify(exportVars)};</script>`)
+      if(expId) {
+        scripts.push(`<script src="//www.google-analytics.com/cx/api.js?experiment=${expId}"></script>`)
+      }
+      scripts.push(`<script src="/javascripts/prismic.js"></script>`)
+      res.locals.ctx = {
+        linkResolver: configuration.linkResolver,
+        scripts,
+      };
+    });
+}
+
 Prismic.init = (app, config, handleError) => {
   if (!config || !config.apiEndpoint) throw 'Missing Prismic Api Endpoint';
 
