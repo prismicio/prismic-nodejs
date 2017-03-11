@@ -6,16 +6,23 @@ Prismic.init = (app, config, handleError) => {
   if (!config || !config.apiEndpoint) throw 'Missing Prismic Api Endpoint';
 
   // catch all routes to attach api and context
-  function setupMiddleware (linkResolver)  {
-    app.route('*').get((req, res, next) => {
+  function setupMiddleware (app)  {
+    app.route('*').get(function prismicMiddleware(req, res, next) {
       Prismic.api(config.apiEndpoint, config.accessToken)
         .then((api) => {
-          req.prismic = { api: api };
-          res.locals.ctx = {
-            endpoint: config.apiEndpoint,
-            linkResolver: linkResolver
-          };
-          next();
+          const pQuickRoutes = api.quickRoutesEnabled()  ? api.quickRoutes() : Promise.resolve([])
+          return pQuickRoutes.then(quickroutes => {
+            //refresh app object with new quick routes
+            hotReloadRoutes(app, quickroutes);
+
+            //configure prismic context
+            req.prismic = { api: api };
+            res.locals.ctx = {
+              endpoint: config.apiEndpoint,
+              linkResolver: QuickRoutes.makeLinkResolver(quickroutes, config.linkResolver)
+            };
+            next();
+          });
         })
         .catch((err) => {
           if (handleError) {
@@ -28,12 +35,17 @@ Prismic.init = (app, config, handleError) => {
   };
 
   // use quick routes to generate router
-  function setupQuickRoutes(quickRoutes) {
-    quickRoutes.filter(r => r.enabled).map((route, index) => {
+  function setupQuickRoutes(app, quickroutes) {
+    quickroutes.filter(r => r.enabled).map((route, index) => {
       app.route(QuickRoutes.toUrl(route)).get((req, res, next) => {
         QuickRoutes.fetchData(req, res, route.fetchers)
           .then((data) => {
-            res.render(route.view, data);
+            if(!data[route.forMask]) {
+              res.status(404);
+              next();
+            } else {
+              res.render(route.view, data);
+            }
           })
           .catch((err) => {
             if (handleError) {
@@ -46,17 +58,28 @@ Prismic.init = (app, config, handleError) => {
     });
   }
 
-  return Prismic.api(config.apiEndpoint, config.accessToken).then(api => {
-    if (api.quickRoutesEnabled()) {
-      api.quickRoutes().then(quickRoutes => {
-        var linkResolver = QuickRoutes.makeLinkResolver(quickRoutes, config.linkResolver);
-        setupMiddleware(linkResolver);
-        setupQuickRoutes(quickRoutes);
-      });
-    } else {
-      setupMiddleware(config.linkResolver);
-    }
-  });
+  function quickroutesURLs(quickroutes) {
+    return quickroutes.map((route) => QuickRoutes.toUrl(route));
+  }
+
+  function hotReloadRoutes (app, quickroutes) {
+    //reset quickroutes
+    const routeStack = app._router.stack.reduce((acc, expressRoute) => {
+      if(!expressRoute.route) return acc.concat([expressRoute]);
+
+      const quickRouteIndex = quickroutesURLs(quickroutes).indexOf(expressRoute.route.path);
+      if(-1 != quickRouteIndex) {
+        return acc;
+      } else {
+        return acc.concat([expressRoute]);
+      }
+    }, []);
+    app._router.stack = routeStack;
+    //regenerate routes
+    setupQuickRoutes(app, quickroutes);
+  }
+
+  setupMiddleware(app);
 };
 
 Prismic.preview = (api, linkResolver, req, res) => {
