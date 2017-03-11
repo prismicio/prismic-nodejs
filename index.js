@@ -2,6 +2,20 @@ var Prismic = require('prismic.io');
 var QuickRoutes = Prismic.QuickRoutes;
 var Cookies = require('cookies');
 
+Prismic.getAPI = function (configuration, req, res) {
+  return Prismic
+    .api(configuration.apiEndpoint, {accessToken: configuration.accessToken, req})
+    .then(api => {
+      req.prismic = {api};
+      const expId = api.experiments.current() && api.experiments.current().googleId();
+      res.locals.ctx = {
+        endpoint: configuration.apiEndpoint,
+        expId: expId,
+        linkResolver: configuration.linkResolver,
+      };
+    });
+}
+
 Prismic.init = (app, config, handleError) => {
   if (!config || !config.apiEndpoint) throw 'Missing Prismic Api Endpoint';
 
@@ -10,10 +24,12 @@ Prismic.init = (app, config, handleError) => {
     app.route('*').get((req, res, next) => {
       Prismic.api(config.apiEndpoint, config.accessToken)
         .then((api) => {
-          req.prismic = { api: api };
+          req.prismic = {api};
+          const expId = api.experiments.current() && api.experiments.current().googleId();
           res.locals.ctx = {
             endpoint: config.apiEndpoint,
-            linkResolver: linkResolver
+            expId: expId,
+            linkResolver: linkResolver,
           };
           next();
         })
