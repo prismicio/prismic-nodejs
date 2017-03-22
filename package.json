@@ -15,7 +15,7 @@
   ],
   "author": "Prismic.io <info@prismic.io>",
   "dependencies": {
-    "cookies": "^0.6.1",
+    "cookies": "0.7.0",
     "prismic.io": "3.5.x"
   },
   "main": "./index.js",
