@@ -1,6 +1,6 @@
 {
   "name": "prismic-nodejs",
-  "description": "Prismic.io support for Prismic.io",
+  "description": "prismic.io middleware for express",
   "version": "1.4.1",
   "license": "Apache-2.0",
   "homepage": "https://github.com/prismicio/prismic-nodejs",
@@ -11,7 +11,8 @@
   "keywords": [
     "express",
     "prismicio",
-    "cms"
+    "cms",
+    "middleware"
   ],
   "author": "Prismic.io <info@prismic.io>",
   "dependencies": {
@@ -20,6 +21,16 @@
   },
   "main": "./index.js",
   "devDependencies": {
-    "eslint": "3.18.0"
+    "eslint": "3.18.0",
+    "babel-eslint": "7.2.0",
+    "eslint-config-airbnb-base": "11.1.0",
+    "eslint-plugin-import": "2.2.0"
+  },
+  "engines" : {
+    "node" : ">=4.8.1",
+    "npm" : ">=2.15.11"
+  },
+  "scripts": {
+    "lint": "eslint *.js"
   }
 }
