@@ -1,20 +1,8 @@
 language: node_js
-sudo: false
 node_js:
 - '4'
 - '5'
 - '6'
-deploy:
-  provider: npm
-  email: arnaud.lewis@gmail.com
-  api_key:
-    secure: Rgo3j+vj/C7vai1OQtMoPDdMUKobGoS8W3K5FDApCZfS58E/LRwGebZpjutGlZP2P/tpEz0uFKjzEEKzO7Hh2sgf7pvSSMJWIYxATPGsnwM2oy0we+ZBb6yCoOdww3K9AMXv03haB/hzngJmNVIp7CurghIGwhybry6nwUAYLkCkHh4LiMnwxpkjEgojDsdOxa/ZBHYR2GyFw0C1/Bmu0X5kD6p6XxW0Z8/Vroisu8Pd4ZxFVMptinsca8qGgdy1Cq+Ubv2ZdwIdkXB7HQ1cIJmDI+sjEQsF5S2yHncqAhYkizkcFFPBBR/AGLBm2OFjysGRCbWQflc49185QrcumbbQl1y1qNVdst4JDPhlRL/dSLPh5Iy/Cc5hoc6ArBnIonoPRCBVuYTchE8BFj+RkTTmzutdzGYoqmNJrxJrMDf75RpK0H/WA9pCctn3gNMRqX8mj/zM6simpX0RVjj24ZL9RullyLwqOxoUMJ/8QjkIV0p1xSgeLA9da0ig3wuMi3Z8y+sgxAXEznT2dOHXT3eVA5KWGimWhjp/3dlnFRgZnfL2xLPFcGodkwD91FDV82TPFG1RS6a/OFnOlPAgGXspa7tWyWHLafZVdAw/nZzSTMcKJIb8O4nf8no2VMQu4TxCRlBCiFtrv4O6legGv6FW9NjR5vW7R+KBaKwiAPk=
-  on:
-    tags: true
-    branch: master
-    repo: prismicio/javascript-kit
-after_script:
-- codeclimate < coverage/lcov.info
-addons:
-  code_climate:
-    repo_token: 25760a4ae3dea7404d3a3ef79951e0b6bf8808fcdb7f63bc1533610a9d8f936d
+- '7'
+script:
+  npm run lint

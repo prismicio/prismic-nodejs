@@ -31,6 +31,7 @@
     "npm" : ">=2.15.11"
   },
   "scripts": {
-    "lint": "eslint *.js"
+    "lint": "eslint *.js",
+    "test": "node -c *.js"
   }
 }
