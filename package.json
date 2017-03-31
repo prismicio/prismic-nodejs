@@ -16,15 +16,15 @@
   ],
   "author": "Prismic.io <info@prismic.io>",
   "dependencies": {
-    "cookies": "0.7.0",
-    "prismic.io": "3.5.x"
+    "cookies": "~0.7.0",
+    "prismic.io": "~3.5.5"
   },
   "main": "./index.js",
   "devDependencies": {
-    "eslint": "3.18.0",
-    "babel-eslint": "7.2.0",
-    "eslint-config-airbnb-base": "11.1.0",
-    "eslint-plugin-import": "2.2.0"
+    "eslint": "~3.19.0",
+    "babel-eslint": "~7.2.0",
+    "eslint-config-airbnb-base": "~11.1.0",
+    "eslint-plugin-import": "~2.2.0"
   },
   "engines" : {
     "node" : ">=4.8.1",
