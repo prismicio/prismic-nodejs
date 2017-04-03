@@ -17,47 +17,47 @@ npm install prismic-nodejs --save
 ### Usage
 
 ```javascript
-var prismic = require('prismic-nodejs');
+const prismic = require('prismic-nodejs');
+const PrismicConfig = require('./prismic-configuration');
 ```
 
 The Prismic object is extended from the [Javascript Kit](https://github.com/prismicio/javascript-kit), so any attribute of the official kit, for example `Predicates`, is also available in the object exposed by express-prismic.
 
-It is recommended to create an `api()` method that will fetch the Api object for your repository, with the correct parameters:
+It is recommended to create a middleware method that will fetch the Api object for your repository and expose data to your templates:
 
 ```javascript
 // This is the configuration for prismic.io
-var ENDPOINT = "http://<your-repository>.prismic.io/api";
-var ACCESSTOKEN = null; // Only if your API is private
-var LINKRESOLVER = function(doc) { // Describe your reverse routing here
-  return '/' + doc.type + '/' + doc.id;
-}
-// This method will return a Promise of Api object
-function api(req, res) {
-  res.locals.ctx = { // So we can use this information in the views
-    endpoint: ENDPOINT,
-    linkResolver: LINKRESOLVER
-  };
-  return Prismic.api(ENDPOINT, {
-    accessToken: ACCESSTOKEN,
-    req: req
+/*
+ * Initialize prismic context and api
+ */
+app.use((req, res, next) => {
+  Prismic.api(PrismicConfig.apiEndpoint, { accessToken: PrismicConfig.accessToken, req })
+  .then((api) => {
+    req.prismic = { api };
+    res.locals.ctx = {
+      endpoint: PrismicConfig.apiEndpoint,
+      linkResolver: PrismicConfig.linkResolver,
+    };
+    next();
+  }).catch((err) => {
+    const message = err.status === 404 ? 'There was a problem connecting to your API, please check your configuration file for errors.' : `Error 500: ${err.message}`;
+    res.status(err.status).send(message);
   });
-}
+});
 ```
 
 You can then call it in your routes if you need to query your repository:
 
 ```javascript
-app.route('/').get(function(req, res) {
-  api(req).then(function (api) {
-    api.getByUID('page', 'get-started', function (err, document) {
-      res.render('index-prismic', {
-        document: document
-      });
-    });
-  }).catch(function(err) {
+app.route('/').get((req, res) => {
+  req.prismic.api.getByUID('page', 'get-started')
+    .then((document) => {
+      res.render('index-prismic', { document });
+    })
+    .catch((err) => {
     // Don't forget error management
-    res.status(500).send("Error 500: " + err.message);
-  });
+      res.status(500).send(`Error 500: ${err.message}`);
+    });
 });
 ```
 
@@ -66,13 +66,9 @@ app.route('/').get(function(req, res) {
 You can preview any document including drafts in your production site, securely. All you have to do is include this route:
 
 ```javascript
-app.route('/preview').get(function(req, res) {
-  api(req).then(function(api) {
-    return Prismic.preview(api, configuration.linkResolver, req, res);
-  }).catch(function(err) {
-    handleError(err, req, res);
-  });
-});
+app.route('/preview').get((req, res) => (
+  Prismic.preview(req.prismic.api, PrismicConfig.linkResolver, req, res)
+));
 ```
 
 Then:
